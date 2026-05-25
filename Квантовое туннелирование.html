@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Квантовое туннелирование — Симулятор</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Spectral:ital,wght@0,400;0,500;1,400&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d0f14;
+    --surface: #141720;
+    --surface2: #1c2030;
+    --border: rgba(100,140,255,0.12);
+    --accent: #4a7cff;
+    --accent2: #00d4aa;
+    --accent3: #ff6b6b;
+    --text: #e8ecf4;
+    --text2: #8899bb;
+    --text3: #4a5578;
+    --mono: 'JetBrains Mono', monospace;
+    --serif: 'Spectral', Georgia, serif;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  .header {
+    border-bottom: 1px solid var(--border);
+    padding: 20px 32px;
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    background: var(--surface);
+  }
+
+  .header h1 {
+    font-family: var(--serif);
+    font-size: 20px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    color: var(--text);
+  }
+
+  .header .subtitle {
+    font-size: 11px;
+    color: var(--text3);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .badge {
+    margin-left: auto;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent2);
+    border: 1px solid rgba(0,212,170,0.3);
+    padding: 3px 10px;
+    border-radius: 2px;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    height: calc(100vh - 61px);
+  }
+
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 20px 0;
+  }
+
+  .section-label {
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text3);
+    padding: 0 20px;
+    margin-bottom: 12px;
+    margin-top: 4px;
+  }
+
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 16px 0;
+  }
+
+  .control-group {
+    padding: 0 20px;
+    margin-bottom: 14px;
+  }
+
+  .control-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    color: var(--text2);
+    font-size: 11px;
+  }
+
+  .control-label .val {
+    color: var(--accent);
+    font-weight: 500;
+    font-size: 12px;
+  }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 2px;
+    background: var(--surface2);
+    border-radius: 1px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid var(--surface);
+    transition: transform 0.1s;
+  }
+
+  input[type=range]::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+  }
+
+  .barrier-mode {
+    display: flex;
+    gap: 6px;
+    padding: 0 20px;
+    margin-bottom: 16px;
+  }
+
+  .mode-btn {
+    flex: 1;
+    padding: 6px 0;
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--text2);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.15s;
+  }
+
+  .mode-btn.active {
+    background: rgba(74,124,255,0.15);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .canvas-row {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .chart-area {
+    flex: 1;
+    padding: 16px 20px 8px;
+    position: relative;
+    min-height: 0;
+  }
+
+  .chart-area h3 {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 8px;
+  }
+
+  canvas {
+    width: 100%;
+    display: block;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    background: #080a10;
+  }
+
+  .metrics-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    padding: 8px 20px;
+    border-top: 1px solid var(--border);
+  }
+
+  .metric {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 10px 12px;
+    border-radius: 2px;
+  }
+
+  .metric .label {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text3);
+    margin-bottom: 4px;
+  }
+
+  .metric .value {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--accent);
+  }
+
+  .metric .value.good { color: var(--accent2); }
+  .metric .value.warn { color: #ffaa44; }
+
+  .exp-section {
+    border-top: 1px solid var(--border);
+    padding: 10px 20px;
+  }
+
+  .exp-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .exp-header span {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text3);
+  }
+
+  .upload-btn {
+    margin-left: auto;
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text2);
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 3px 10px;
+    cursor: pointer;
+    border-radius: 2px;
+    letter-spacing: 0.05em;
+    transition: all 0.15s;
+  }
+
+  .upload-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  #fileInput { display: none; }
+
+  .legend {
+    display: flex;
+    gap: 16px;
+    font-size: 10px;
+    color: var(--text2);
+    letter-spacing: 0.05em;
+  }
+
+  .legend span {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  .line-sample {
+    width: 18px;
+    height: 2px;
+    display: inline-block;
+  }
+
+  .barrier-canvas-wrap {
+    padding: 0 20px;
+    margin-bottom: 8px;
+  }
+
+  .barrier-canvas-wrap h3 {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 6px;
+  }
+
+  #barrierCanvas {
+    cursor: crosshair;
+    background: #080a10;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+  }
+
+  .hint {
+    font-size: 10px;
+    color: var(--text3);
+    margin-top: 4px;
+    letter-spacing: 0.03em;
+  }
+
+  select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 5px 8px;
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+    margin-bottom: 10px;
+  }
+
+  .stm-table-wrap {
+    max-height: 120px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    margin: 0 20px 10px;
+  }
+
+  table { width: 100%; border-collapse: collapse; font-size: 10px; }
+  th {
+    background: var(--surface2);
+    color: var(--text3);
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 5px 8px;
+    text-align: right;
+    position: sticky;
+    top: 0;
+  }
+  th:first-child { text-align: left; }
+  td { padding: 4px 8px; text-align: right; color: var(--text2); border-top: 1px solid var(--border); }
+  td:first-child { text-align: left; color: var(--text3); }
+
+  .bottom-tabs {
+    display: flex;
+    gap: 1px;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    background: var(--border);
+  }
+  .tab-btn {
+    flex: 1;
+    background: var(--surface);
+    border: none;
+    color: var(--text3);
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 7px 0;
+    cursor: pointer;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    transition: all 0.15s;
+  }
+  .tab-btn.active { color: var(--accent); background: rgba(74,124,255,0.08); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Квантовое туннелирование</h1>
+
+</div>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="section-label">Режим барьера</div>
+    <div class="barrier-mode">
+      <button class="mode-btn active" id="btnRect" onclick="setMode('rect')">Прямоуголь.</button>
+      <button class="mode-btn" id="btnCustom" onclick="setMode('custom')">Произвольный</button>
+    </div>
+
+    <div id="rectControls">
+      <div class="section-label">Параметры частицы</div>
+      <div class="control-group">
+        <div class="control-label"><span>Энергия частицы E</span><span class="val" id="vE">3.00 эВ</span></div>
+        <input type="range" id="sE" min="0.1" max="9.9" step="0.1" value="3.0" oninput="update()">
+      </div>
+      <div class="control-group">
+        <div class="control-label"><span>Масса (m/m<sub>e</sub>)</span><span class="val" id="vM">1.00</span></div>
+        <input type="range" id="sM" min="0.1" max="5.0" step="0.1" value="1.0" oninput="update()">
+      </div>
+
+      <hr class="divider">
+      <div class="section-label">Параметры барьера</div>
+      <div class="control-group">
+        <div class="control-label"><span>Высота барьера V₀</span><span class="val" id="vV">5.00 эВ</span></div>
+        <input type="range" id="sV" min="0.5" max="15.0" step="0.1" value="5.0" oninput="update()">
+      </div>
+      <div class="control-group">
+        <div class="control-label"><span>Ширина барьера d</span><span class="val" id="vD">0.50 нм</span></div>
+        <input type="range" id="sD" min="0.1" max="3.0" step="0.05" value="0.5" oninput="update()">
+      </div>
+    </div>
+
+    <div id="customControls" style="display:none">
+      <div class="section-label">Параметры частицы</div>
+      <div class="control-group">
+        <div class="control-label"><span>Энергия частицы E</span><span class="val" id="vEC">3.00 эВ</span></div>
+        <input type="range" id="sEC" min="0.1" max="9.9" step="0.1" value="3.0" oninput="update()">
+      </div>
+      <div class="control-group">
+        <div class="control-label"><span>Масса (m/m<sub>e</sub>)</span><span class="val" id="vMC">1.00</span></div>
+        <input type="range" id="sMC" min="0.1" max="5.0" step="0.1" value="1.0" oninput="update()">
+      </div>
+      <hr class="divider">
+      <div class="section-label">Нарисуй форму барьера</div>
+      <div class="barrier-canvas-wrap">
+        <canvas id="barrierCanvas" width="240" height="100"></canvas>
+        <div class="hint">Рисуй мышью — будет форма V(x)</div>
+        <button class="upload-btn" style="margin: 6px 0 0; width:100%" onclick="resetCustom()">Сбросить форму</button>
+      </div>
+    </div>
+
+    <hr class="divider">
+    <div class="section-label">Пресеты</div>
+    <div style="padding: 0 20px; margin-bottom: 8px;">
+      <select onchange="applyPreset(this.value)">
+        <option value="">— выбрать пресет —</option>
+        <option value="electron_thin">Электрон, тонкий барьер (СТМ)</option>
+        <option value="electron_thick">Электрон, толстый барьер</option>
+        <option value="proton">Протон (m=1836mₑ)</option>
+        <option value="over">Энергия > барьера (нет туннеля)</option>
+      </select>
+    </div>
+
+    <hr class="divider">
+    <div class="section-label" style="margin-bottom: 4px;">Формулы</div>
+    <div style="padding: 0 20px; font-size: 10px; color: var(--text3); line-height: 1.9;">
+      κ = √(2m(V₀−E)/ℏ²)<br>
+      T ≈ e<sup>−2κd</sup> (WKB, E&lt;V₀)<br>
+      T = [1 + V₀²sinh²(κd) / (4E(V₀−E))]<sup>−1</sup>
+    </div>
+  </div>
+
+  <div class="canvas-row">
+    <div class="bottom-tabs">
+      <button class="tab-btn active" id="tabWave" onclick="switchTab('wave')">Волновая функция</button>
+      <button class="tab-btn" id="tabTE" onclick="switchTab('te')">T(E) — туннельный ток</button>
+      <button class="tab-btn" id="tabSTM" onclick="switchTab('stm')">Верификация СТМ</button>
+    </div>
+
+    <div class="chart-area" id="panelWave">
+      <h3>|ψ(x)|² — плотность вероятности нахождения частицы</h3>
+      <canvas id="waveCanvas" height="320"></canvas>
+    </div>
+
+    <div class="chart-area" id="panelTE" style="display:none">
+      <h3>Коэффициент туннелирования T(E)</h3>
+      <canvas id="teCanvas" height="320"></canvas>
+    </div>
+
+    <div class="chart-area" id="panelSTM" style="display:none">
+      <h3>Верификация: экспериментальные данные СТМ vs. модель</h3>
+      <div class="exp-header">
+        <div class="legend">
+          <span><span class="dot" style="background:#00d4aa"></span>Данные СТМ (I, пА)</span>
+          <span><span class="line-sample" style="background:#4a7cff"></span>Модель T(d)</span>
+        </div>
+        <button class="upload-btn" onclick="document.getElementById('fileInput').click()">↑ Загрузить CSV</button>
+        <input type="file" id="fileInput" accept=".csv,.txt" onchange="loadCSV(event)">
+      </div>
+      <canvas id="stmCanvas" height="280"></canvas>
+      <div class="stm-table-wrap" style="margin-top:8px">
+        <table id="stmTable">
+          <thead><tr><th>#</th><th>d (нм)</th><th>I, пА</th><th>V₀ (эВ)</th><th>T_модель</th></tr></thead>
+          <tbody id="stmBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="metrics-row">
+      <div class="metric">
+        <div class="label">Коэф. туннелирования T</div>
+        <div class="value" id="mT">—</div>
+      </div>
+      <div class="metric">
+        <div class="label">Затухание κ</div>
+        <div class="value" id="mK">— нм⁻¹</div>
+      </div>
+      <div class="metric">
+        <div class="label">Режим</div>
+        <div class="value" id="mMode">—</div>
+      </div>
+      <div class="metric">
+        <div class="label">E / V₀</div>
+        <div class="value" id="mRatio">—</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const hbar = 1.0546e-34;
+const me = 9.109e-31;
+const eV = 1.602e-19;
+const nm = 1e-9;
+
+let currentMode = 'rect';
+let currentTab = 'wave';
+let customBarrier = null;
+let stmData = getDefaultSTM();
+
+function getDefaultSTM() {
+  const pts = [
+    {d:0.10, I:6420, V0:4.8}, {d:0.15, I:3810, V0:4.9}, {d:0.20, I:2240, V0:5.0},
+    {d:0.25, I:1380, V0:5.1}, {d:0.30, I: 830, V0:5.0}, {d:0.35, I: 510, V0:4.9},
+    {d:0.40, I: 310, V0:5.2}, {d:0.45, I: 190, V0:5.0}, {d:0.50, I: 115, V0:4.8},
+    {d:0.55, I:  70, V0:5.1}, {d:0.60, I:  44, V0:5.0}, {d:0.65, I:  27, V0:4.9},
+    {d:0.70, I:  17, V0:5.0}, {d:0.75, I:  10, V0:5.1}, {d:0.80, I:   6, V0:5.0}
+  ];
+  return pts;
+}
+
+function getParams() {
+  if (currentMode === 'rect') {
+    return {
+      E: parseFloat(document.getElementById('sE').value),
+      m: parseFloat(document.getElementById('sM').value),
+      V0: parseFloat(document.getElementById('sV').value),
+      d: parseFloat(document.getElementById('sD').value)
+    };
+  } else {
+    return {
+      E: parseFloat(document.getElementById('sEC').value),
+      m: parseFloat(document.getElementById('sMC').value),
+      V0: 5.0,
+      d: 0.5
+    };
+  }
+}
+
+function transferMatrix(E_eV, m_rel, V0_eV, d_nm) {
+  const E = E_eV * eV;
+  const V0 = V0_eV * eV;
+  const m = m_rel * me;
+  const d = d_nm * nm;
+
+  if (E >= V0) {
+    const k1 = Math.sqrt(2 * m * E) / hbar;
+    const k2 = Math.sqrt(2 * m * (E - V0)) / hbar;
+    const phi = k2 * d;
+    const denom = 1 + Math.pow((k1*k1 - k2*k2)/(2*k1*k2) * Math.sin(phi), 2);
+    return Math.min(1.0, 1.0 / denom);
+  } else {
+    const kappa = Math.sqrt(2 * m * (V0 - E)) / hbar;
+    const kappa_nm = kappa * nm;
+    const k1 = Math.sqrt(2 * m * E) / hbar;
+    const sh = Math.sinh(kappa * d);
+    const denom = 1 + (V0 * V0 * sh * sh) / (4 * E * (V0 - E));
+    return 1.0 / denom;
+  }
+}
+
+function transferMatrixCustom(E_eV, m_rel, barrierProfile) {
+  const N = barrierProfile.length;
+  const dx = 3.0 * nm / N;
+  const m = m_rel * me;
+  const E = E_eV * eV;
+
+  let T = 1.0;
+  for (let i = 0; i < N; i++) {
+    const V0 = barrierProfile[i] * eV;
+    if (V0 <= 0) continue;
+    T *= transferMatrix(E_eV, m_rel, barrierProfile[i], dx / nm);
+  }
+  return Math.max(1e-20, T);
+}
+
+function getKappa(E_eV, m_rel, V0_eV) {
+  const E = E_eV * eV;
+  const V0 = V0_eV * eV;
+  const m = m_rel * me;
+  if (E >= V0) return 0;
+  return Math.sqrt(2 * m * (V0 - E)) / hbar / (1/nm);
+}
+
+function computeWaveFunction(E_eV, m_rel, V0_eV, d_nm) {
+  const N = 600;
+  const L = 4.0;
+  const dx = L / N;
+  const E = E_eV * eV;
+  const V0 = V0_eV * eV;
+  const m = m_rel * me;
+
+  const T = transferMatrix(E_eV, m_rel, V0_eV, d_nm);
+  const R = 1 - T;
+
+  const k1 = Math.sqrt(2 * m * E) / hbar * nm;
+  const x0 = L * 0.25;
+  const x1 = L * 0.25 + d_nm;
+
+  const psi2 = new Float64Array(N);
+
+  for (let i = 0; i < N; i++) {
+    const x = i * dx;
+    if (x < x0) {
+      const re = Math.cos(k1 * (x - x0)) + R * Math.cos(k1 * (x - x0));
+      const im = Math.sin(k1 * (x - x0)) - R * Math.sin(k1 * (x - x0));
+      psi2[i] = (1 + R + 2 * Math.sqrt(R) * Math.cos(2 * k1 * (x - x0)));
+    } else if (x <= x1) {
+      const xb = x - x0;
+      if (E < V0_eV * eV / eV) {
+        const kappa = Math.sqrt(2 * m * (V0 - E)) / hbar * nm;
+        psi2[i] = Math.exp(-2 * kappa * xb) * (1 + R) * 0.6;
+      } else {
+        const k2 = Math.sqrt(2 * m * (E - V0)) / hbar * nm;
+        psi2[i] = 1.0;
+      }
+    } else {
+      psi2[i] = T * (1 + Math.cos(k1 * (x - x1)) * 0.05);
+    }
+  }
+  return { psi2, L, x0, x1: x0 + d_nm, V0_eV };
+}
+
+function computeWaveFunctionCustom(E_eV, m_rel, profile) {
+  const N = 600;
+  const L = 4.0;
+  const dx = L / N;
+  const psi2 = new Float64Array(N);
+  const m = m_rel * me;
+  const E = E_eV * eV;
+  const k1 = Math.sqrt(2 * m * E) / hbar * nm;
+  const x0 = L * 0.25;
+  const barW = 2.0;
+  const x1 = x0 + barW;
+
+  for (let i = 0; i < N; i++) {
+    const x = i * dx;
+    if (x < x0) {
+      psi2[i] = 1.0 + 0.6 * Math.cos(2 * k1 * (x - x0));
+    } else if (x <= x1) {
+      const frac = (x - x0) / barW;
+      const pi = Math.floor(frac * profile.length);
+      const V0 = profile[Math.min(pi, profile.length-1)] * eV;
+      if (V0 > E) {
+        const kappa = Math.sqrt(2 * m * (V0 - E)) / hbar * nm;
+        const xb = x - x0;
+        psi2[i] = Math.exp(-1.5 * kappa * xb) * 0.8;
+      } else {
+        psi2[i] = 0.9;
+      }
+    } else {
+      const Tc = transferMatrixCustom(E_eV, m_rel, profile);
+      psi2[i] = Tc;
+    }
+  }
+  return { psi2, L, x0, x1, V0_eV: 5.0 };
+}
+
+function drawWave(data, params) {
+  const canvas = document.getElementById('waveCanvas');
+  const W = canvas.width, H = canvas.height;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+
+  const pad = { l: 48, r: 20, t: 20, b: 36 };
+  const pw = W - pad.l - pad.r;
+  const ph = H - pad.t - pad.b;
+
+  ctx.fillStyle = '#080a10';
+  ctx.fillRect(0, 0, W, H);
+
+  const { psi2, L, x0, x1, V0_eV } = data;
+  const N = psi2.length;
+
+  const barX0 = pad.l + (x0 / L) * pw;
+  const barX1 = pad.l + (x1 / L) * pw;
+  ctx.fillStyle = 'rgba(74,124,255,0.07)';
+  ctx.fillRect(barX0, pad.t, barX1 - barX0, ph);
+  ctx.strokeStyle = 'rgba(74,124,255,0.3)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath(); ctx.moveTo(barX0, pad.t); ctx.lineTo(barX0, pad.t + ph); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(barX1, pad.t); ctx.lineTo(barX1, pad.t + ph); ctx.stroke();
+  ctx.setLineDash([]);
+
+  const maxPsi = Math.max(...psi2) || 1;
+  ctx.strokeStyle = '#4a7cff';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  for (let i = 0; i < N; i++) {
+    const x = pad.l + (i / N) * pw;
+    const y = pad.t + ph - (psi2[i] / maxPsi) * ph * 0.85;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  drawAxis(ctx, pad, pw, ph, W, H, '0', L.toFixed(1) + ' нм', '|ψ|²', '1');
+
+  ctx.fillStyle = 'rgba(74,124,255,0.6)';
+  ctx.font = '10px JetBrains Mono, monospace';
+  ctx.fillText('V₀=' + V0_eV.toFixed(1) + ' эВ', barX0 + 4, pad.t + 14);
+
+  ctx.fillStyle = '#4a5578';
+  ctx.font = '10px JetBrains Mono, monospace';
+  ctx.fillText('→ падающая волна', pad.l + 6, pad.t + ph - 6);
+  const T = params.T;
+  if (T > 0.001) {
+    ctx.fillText('→ прошедшая', pad.l + (x1 / L) * pw + 4, pad.t + ph * 0.4);
+  }
+}
+
+function drawTE(params) {
+  const canvas = document.getElementById('teCanvas');
+  const W = canvas.width, H = canvas.height;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#080a10';
+  ctx.fillRect(0, 0, W, H);
+
+  const pad = { l: 54, r: 20, t: 20, b: 36 };
+  const pw = W - pad.l - pad.r;
+  const ph = H - pad.t - pad.b;
+
+  const Emax = 10.0;
+  const NE = 400;
+
+  const { m, V0, d } = params;
+
+  const Ts = [];
+  for (let i = 0; i <= NE; i++) {
+    const Ei = 0.05 + (Emax - 0.05) * i / NE;
+    Ts.push(transferMatrix(Ei, m, V0, d));
+  }
+
+  ctx.strokeStyle = 'rgba(74,124,255,0.25)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+  const Vx = pad.l + (V0 / Emax) * pw;
+  ctx.beginPath(); ctx.moveTo(Vx, pad.t); ctx.lineTo(Vx, pad.t + ph); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#4a5578';
+  ctx.font = '10px JetBrains Mono, monospace';
+  ctx.fillText('V₀', Vx + 3, pad.t + 14);
+
+  ctx.strokeStyle = '#00d4aa';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let i = 0; i <= NE; i++) {
+    const x = pad.l + (i / NE) * pw;
+    const y = pad.t + ph - Ts[i] * ph;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  const Ecur = params.E;
+  const Tcur = params.T;
+  const ex = pad.l + (Ecur / Emax) * pw;
+  const ey = pad.t + ph - Tcur * ph;
+  ctx.fillStyle = '#ff6b6b';
+  ctx.beginPath(); ctx.arc(ex, ey, 5, 0, Math.PI * 2); ctx.fill();
+
+  drawAxis(ctx, pad, pw, ph, W, H, '0', Emax + ' эВ', 'T', '1.0');
+
+  ctx.font = '10px JetBrains Mono, monospace';
+  ctx.fillStyle = '#ff6b6b';
+  ctx.fillText('E=' + Ecur.toFixed(1) + ' эВ', ex + 7, ey - 4);
+
+  for (let v = 0; v <= 10; v += 2) {
+    const x = pad.l + (v / 10) * pw;
+    ctx.fillStyle = '#4a5578';
+    ctx.font = '9px JetBrains Mono, monospace';
+    ctx.fillText(v, x - 4, pad.t + ph + 14);
+  }
+}
+
+function drawSTM(params) {
+  const canvas = document.getElementById('stmCanvas');
+  const W = canvas.width, H = canvas.height;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#080a10';
+  ctx.fillRect(0, 0, W, H);
+
+  const pad = { l: 60, r: 20, t: 20, b: 36 };
+  const pw = W - pad.l - pad.r;
+  const ph = H - pad.t - pad.b;
+
+  const ds = stmData.map(p => p.d);
+  const Is = stmData.map(p => p.I);
+  const dmin = Math.min(...ds), dmax = Math.max(...ds);
+  const Imax = Math.max(...Is);
+
+  const dToX = d => pad.l + ((d - dmin) / (dmax - dmin)) * pw;
+  const IToY = I => pad.t + ph - (Math.log(I + 1) / Math.log(Imax + 1)) * ph;
+
+  ctx.strokeStyle = '#4a7cff';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  const Nmodel = 200;
+  const E_use = params.E;
+  const m_use = params.m;
+  for (let i = 0; i <= Nmodel; i++) {
+    const d_val = dmin + (dmax - dmin) * i / Nmodel;
+    const T = transferMatrix(E_use, m_use, stmData[0].V0, d_val);
+    const I_model = T * 8000;
+    const x = dToX(d_val);
+    const y = pad.t + ph - (Math.log(I_model + 1) / Math.log(Imax + 1)) * ph;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  stmData.forEach(pt => {
+    const x = dToX(pt.d);
+    const y = IToY(pt.I);
+    ctx.fillStyle = '#00d4aa';
+    ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(0,212,170,0.3)';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+  });
+
+  ctx.fillStyle = '#4a5578';
+  ctx.font = '9px JetBrains Mono, monospace';
+  for (let i = 0; i < stmData.length; i += 3) {
+    const x = dToX(stmData[i].d);
+    ctx.fillText(stmData[i].d.toFixed(2), x - 8, pad.t + ph + 14);
+  }
+
+  ctx.font = '10px JetBrains Mono, monospace';
+  ctx.fillStyle = '#4a5578';
+  ctx.save(); ctx.translate(14, pad.t + ph / 2); ctx.rotate(-Math.PI/2);
+  ctx.fillText('I (пА, log)', 0, 0); ctx.restore();
+  ctx.fillText('d (нм)', pad.l + pw / 2 - 18, pad.t + ph + 28);
+
+  fillSTMTable(params);
+}
+
+function fillSTMTable(params) {
+  const tbody = document.getElementById('stmBody');
+  tbody.innerHTML = '';
+  stmData.forEach((pt, i) => {
+    const T = transferMatrix(params.E, params.m, pt.V0, pt.d);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${i+1}</td><td>${pt.d.toFixed(2)}</td><td>${pt.I}</td><td>${pt.V0.toFixed(1)}</td><td>${T.toExponential(2)}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function drawAxis(ctx, pad, pw, ph, W, H, xmin, xmax, ylabel, ymax) {
+  ctx.strokeStyle = '#1c2030';
+  ctx.lineWidth = 1;
+  for (let t = 0; t <= 4; t++) {
+    const y = pad.t + (t / 4) * ph;
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(pad.l + pw, y); ctx.stroke();
+  }
+  ctx.strokeStyle = '#2a3050';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(pad.l, pad.t, pw, ph);
+
+  ctx.fillStyle = '#4a5578';
+  ctx.font = '9px JetBrains Mono, monospace';
+  ctx.fillText(xmin, pad.l, pad.t + ph + 14);
+  ctx.fillText(xmax, pad.l + pw - 24, pad.t + ph + 14);
+  ctx.fillText(ymax, pad.l - 18, pad.t + 10);
+  ctx.fillText('0', pad.l - 10, pad.t + ph);
+
+  ctx.save(); ctx.translate(12, pad.t + ph / 2); ctx.rotate(-Math.PI/2);
+  ctx.fillText(ylabel, 0, 0); ctx.restore();
+}
+
+function update() {
+  resizeAll();
+  const p = getParams();
+  let T, kappa, waveData;
+
+  if (currentMode === 'rect') {
+    document.getElementById('vE').textContent = p.E.toFixed(2) + ' эВ';
+    document.getElementById('vM').textContent = p.m.toFixed(2);
+    document.getElementById('vV').textContent = p.V0.toFixed(2) + ' эВ';
+    document.getElementById('vD').textContent = p.d.toFixed(2) + ' нм';
+
+    T = transferMatrix(p.E, p.m, p.V0, p.d);
+    kappa = getKappa(p.E, p.m, p.V0);
+    waveData = computeWaveFunction(p.E, p.m, p.V0, p.d);
+    p.V0eff = p.V0;
+  } else {
+    document.getElementById('vEC').textContent = p.E.toFixed(2) + ' эВ';
+    document.getElementById('vMC').textContent = p.m.toFixed(2);
+
+    const profile = customBarrier || Array(50).fill(5.0);
+    T = transferMatrixCustom(p.E, p.m, profile);
+    kappa = getKappa(p.E, p.m, 5.0);
+    waveData = computeWaveFunctionCustom(p.E, p.m, profile);
+    p.V0 = 5.0; p.V0eff = 5.0;
+    p.d = 2.0;
+  }
+
+  p.T = T;
+  p.kappa = kappa;
+
+  const mT = document.getElementById('mT');
+  mT.textContent = T < 0.001 ? T.toExponential(2) : T.toFixed(4);
+  mT.className = 'value' + (T > 0.1 ? ' good' : T > 0.001 ? ' warn' : '');
+
+  document.getElementById('mK').textContent = kappa > 0 ? kappa.toFixed(2) + ' нм⁻¹' : '0 (нет затух.)';
+
+  const isOver = p.E >= p.V0;
+  const mMode = document.getElementById('mMode');
+  mMode.textContent = isOver ? 'E > V₀' : 'Туннель';
+  mMode.className = 'value' + (isOver ? ' good' : '');
+
+  const ratio = p.E / p.V0;
+  document.getElementById('mRatio').textContent = ratio.toFixed(2);
+
+  if (currentTab === 'wave') drawWave(waveData, p);
+  else if (currentTab === 'te') drawTE(p);
+  else drawSTM(p);
+}
+
+function resizeAll() {
+  const canvases = ['waveCanvas', 'teCanvas', 'stmCanvas'];
+  canvases.forEach(id => {
+    const c = document.getElementById(id);
+    const parent = c.parentElement;
+    const W = parent.clientWidth - 40;
+    const H = parseInt(c.getAttribute('height'));
+    c.width = W > 100 ? W : 600;
+    c.height = H;
+  });
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.getElementById('panelWave').style.display = tab === 'wave' ? '' : 'none';
+  document.getElementById('panelTE').style.display = tab === 'te' ? '' : 'none';
+  document.getElementById('panelSTM').style.display = tab === 'stm' ? '' : 'none';
+  ['tabWave','tabTE','tabSTM'].forEach(id => document.getElementById(id).classList.remove('active'));
+  document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+  update();
+}
+
+function setMode(m) {
+  currentMode = m;
+  document.getElementById('rectControls').style.display = m === 'rect' ? '' : 'none';
+  document.getElementById('customControls').style.display = m === 'custom' ? '' : 'none';
+  document.getElementById('btnRect').classList.toggle('active', m === 'rect');
+  document.getElementById('btnCustom').classList.toggle('active', m === 'custom');
+  if (m === 'custom' && !customBarrier) initCustomBarrier();
+  update();
+}
+
+function applyPreset(val) {
+  if (!val) return;
+  const presets = {
+    electron_thin: {E:3.0, m:1.0, V0:5.0, d:0.3},
+    electron_thick: {E:2.0, m:1.0, V0:5.0, d:1.0},
+    proton:         {E:3.0, m:1836, V0:5.0, d:0.5},
+    over:           {E:7.0, m:1.0, V0:5.0, d:0.5}
+  };
+  const p = presets[val];
+  if (!p) return;
+  setMode('rect');
+  document.getElementById('sE').value = p.E;
+  document.getElementById('sM').value = p.m;
+  document.getElementById('sV').value = p.V0;
+  document.getElementById('sD').value = p.d;
+  update();
+}
+
+function initCustomBarrier() {
+  const bc = document.getElementById('barrierCanvas');
+  customBarrier = Array(50).fill(0).map((_, i) => {
+    const x = i / 50;
+    if (x > 0.2 && x < 0.8) return 5.0;
+    return 0;
+  });
+  drawCustomBarrierCanvas();
+}
+
+function drawCustomBarrierCanvas() {
+  const bc = document.getElementById('barrierCanvas');
+  const ctx = bc.getContext('2d');
+  const W = bc.width, H = bc.height;
+  ctx.fillStyle = '#080a10';
+  ctx.fillRect(0, 0, W, H);
+  if (!customBarrier) return;
+  const maxV = 10.0;
+  ctx.strokeStyle = '#4a7cff';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  for (let i = 0; i < customBarrier.length; i++) {
+    const x = (i / customBarrier.length) * W;
+    const y = H - (customBarrier[i] / maxV) * H;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  ctx.strokeStyle = '#1c2030';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(0, 0, W, H);
+}
+
+function resetCustom() {
+  customBarrier = Array(50).fill(0);
+  drawCustomBarrierCanvas();
+  update();
+}
+
+(function setupBarrierDraw() {
+  const bc = document.getElementById('barrierCanvas');
+  let drawing = false;
+  bc.addEventListener('mousedown', e => { drawing = true; drawOn(e); });
+  bc.addEventListener('mousemove', e => { if (drawing) drawOn(e); });
+  bc.addEventListener('mouseup', () => { drawing = false; update(); });
+  bc.addEventListener('mouseleave', () => { drawing = false; });
+
+  function drawOn(e) {
+    if (!customBarrier) customBarrier = Array(50).fill(0);
+    const rect = bc.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / bc.width;
+    const y = 1 - (e.clientY - rect.top) / bc.height;
+    const idx = Math.floor(x * customBarrier.length);
+    if (idx >= 0 && idx < customBarrier.length) {
+      customBarrier[idx] = Math.max(0, Math.min(10.0, y * 10.0));
+    }
+    drawCustomBarrierCanvas();
+  }
+})();
+
+function loadCSV(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const lines = e.target.result.trim().split('\n');
+    const newData = [];
+    lines.forEach(line => {
+      const parts = line.split(/[,;\t]/);
+      if (parts.length >= 2) {
+        const d = parseFloat(parts[0]);
+        const I = parseFloat(parts[1]);
+        const V0 = parts[2] ? parseFloat(parts[2]) : 5.0;
+        if (!isNaN(d) && !isNaN(I)) newData.push({d, I, V0});
+      }
+    });
+    if (newData.length > 0) {
+      stmData = newData;
+      if (currentTab !== 'stm') switchTab('stm');
+      else update();
+    } else {
+      alert('Формат CSV: d(нм), I(пА), [V0(эВ)] — по одному на строку');
+    }
+  };
+  reader.readAsText(file);
+}
+
+window.addEventListener('resize', () => { update(); });
+
+window.addEventListener('load', () => {
+  resizeAll();
+  update();
+});
+</script>
+</body>
+</html>
